@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="create_survey.css">
+<title>Create Survey</title>
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="logo">Survey Management System</div>
+    <ul class="nav-links">
+        <li><a href="home_page.html">Home</a></li>
+        <li><a href="dashboard_admin.html">Dashboard</a></li>
+        <li><a class="active" href="about_us.html">About Us</a></li>
+        <li><a href="contact_page.html">Contact</a></li>
+    </ul>
+</nav>
+
+<h1>Create Survey Questions</h1>
+
+<div class="top-actions">
+    <button class="add-btn" onclick="addQuestion()">+ Add Question</button>
+    <button class="preview-btn" onclick="previewSurvey()">Preview</button>
+</div>
+
+<div class="survey-container" id="surveyContainer"></div>
+
+<template id="questionTemplate">
+    <div class="question-box">
+        <button class="delete-btn" onclick="deleteQuestion(this)">X</button>
+        <label><b>Question</b></label>
+        <input type="text" placeholder="Enter question text">
+        <label>Type:</label>
+        <select onchange="toggleOptions(this)">
+            <option value="short">Short Answer</option>
+            <option value="multiple">Multiple Choice</option>
+        </select>
+        <div class="options-container" style="display:none;">
+            <button type="button" onclick="addOption(this)">+ Add Option</button>
+            <div class="options-list"></div>
+        </div>
+    </div>
+</template>
+
+<div class="bottom-save">
+    <button class="save-btn" onclick="saveSurvey()">Save Survey</button>
+</div>
+
+<script>
+let questionCount = 0;
+
+function addQuestion() {
+    questionCount++;
+    const template = document.getElementById("questionTemplate");
+    const clone = template.content.cloneNode(true);
+    const label = clone.querySelector("label b");
+    label.textContent = `Question ${questionCount}`;
+    document.getElementById("surveyContainer").appendChild(clone);
+}
+
+function deleteQuestion(btn) {
+    btn.parentElement.remove();
+    renumberQuestions();
+}
+
+function toggleOptions(select) {
+    const container = select.parentElement.querySelector(".options-container");
+    container.style.display = select.value === "multiple" ? "block" : "none";
+}
+
+function addOption(btn) {
+    const list = btn.parentElement.querySelector(".options-list");
+    const optionDiv = document.createElement("div");
+    optionDiv.className = "option-box";
+    optionDiv.innerHTML = `
+        <input type="text" placeholder="Option text">
+        <button type="button" class="remove-option" onclick="this.parentElement.remove()">X</button>
+    `;
+    list.appendChild(optionDiv);
+}
+
+function renumberQuestions() {
+    const boxes = document.querySelectorAll(".question-box");
+    boxes.forEach((box, i) => {
+        box.querySelector("label b").textContent = `Question ${i + 1}`;
+    });
+    questionCount = boxes.length;
+}
+
+function saveSurvey() {
+    const boxes = document.querySelectorAll(".question-box");
+    if(boxes.length === 0){
+        alert("Add some questions first!");
+        return;
+    }
+
+    const questions = [];
+    boxes.forEach((box) => {
+        const qText = box.querySelector("input").value.trim();
+        const qType = box.querySelector("select").value;
+        if(!qText) return;
+
+        const obj = { question: qText, type: qType };
+
+        if(qType === "multiple") {
+            const opts = [...box.querySelectorAll(".options-list input")].map(i => i.value.trim()).filter(v => v);
+            obj.options = opts;
+        }
+        questions.push(obj);
+    });
+
+    fetch("save_survey.php", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ questions: questions })
+})
+.then(res => res.json())  
+.then(data => alert(data.message))
+.catch(err => alert("Error saving survey"));
+}
+
+
+
+function previewSurvey() {
+    const boxes = document.querySelectorAll(".question-box");
+    if(boxes.length === 0) {
+        alert("Add some questions first!");
+        return;
+    }
+    let preview = "";
+    boxes.forEach((box, i) => {
+        const q = box.querySelector("input").value;
+        const type = box.querySelector("select").value;
+       
+        if(type === "multiple") {
+            const options = [...box.querySelectorAll(".option-text, .options-list input")].map(o => o.value).filter(v => v);
+            preview += "   Options: " + options.join(", ") + "\n";
+        }
+    });
+    alert(preview);
+}
+</script>
+
+</body>
+</html>
